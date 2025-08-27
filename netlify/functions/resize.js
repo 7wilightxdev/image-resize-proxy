@@ -8,30 +8,29 @@ exports.handler = async (event, context) => {
             return {
                 statusCode: 400,
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ error: 'Thiếu tham số URL' })
+                body: JSON.stringify({ error: 'Missing url parameter' })
             };
         }
 
-        console.log(`Xử lý ảnh: ${url} -> ${w}x${h}`);
+        console.log(`Processing image: ${url} -> ${w}x${h}`);
 
-        // Fetch ảnh từ GCS pre-signed URL
+        // Fetch image from GCS pre-signed URL
         const response = await fetch(url);
-
         if (!response.ok) {
             return {
                 statusCode: 404,
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ error: 'Không tìm thấy ảnh' })
+                body: JSON.stringify({ error: 'Image not found' })
             };
         }
 
         const imageBuffer = Buffer.from(await response.arrayBuffer());
-        console.log(`Kích thước ảnh gốc: ${imageBuffer.length} bytes`);
+        console.log(`Original image size: ${imageBuffer.length} bytes`);
 
-        // Resize với Sharp (tối ưu cho ảnh lớn)
+        // Resize with Sharp (optimized for large images)
         const resizedBuffer = await sharp(imageBuffer, {
-            limitInputPixels: false,    // Cho phép ảnh rất lớn
-            sequentialRead: true        // Đọc tuần tự để tiết kiệm memory
+            limitInputPixels: false,    // Allow very large images
+            sequentialRead: true        // Sequential read to save memory
         })
             .resize(parseInt(w), parseInt(h), {
                 fit: 'cover',
@@ -45,13 +44,13 @@ exports.handler = async (event, context) => {
             })
             .toBuffer();
 
-        console.log(`Kích thước ảnh sau resize: ${resizedBuffer.length} bytes`);
+        console.log(`Resized image size: ${resizedBuffer.length} bytes`);
 
         return {
             statusCode: 200,
             headers: {
                 'Content-Type': 'image/jpeg',
-                'Cache-Control': 'public, max-age=31536000',
+                // 'Cache-Control': 'public, max-age=31536000',
                 'Content-Length': resizedBuffer.length.toString(),
                 'Access-Control-Allow-Origin': '*'
             },
@@ -60,12 +59,12 @@ exports.handler = async (event, context) => {
         };
 
     } catch (error) {
-        console.error('Lỗi xử lý ảnh:', error);
+        console.error('Error processing image:', error);
         return {
             statusCode: 500,
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
-                error: 'Lỗi xử lý ảnh',
+                error: 'Error processing image',
                 details: error.message
             })
         };
